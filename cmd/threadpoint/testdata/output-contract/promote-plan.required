@@ -1,0 +1,14 @@
+$.candidates[] array
+$.candidates[].content string
+$.candidates[].diff string
+$.candidates[].id string
+$.candidates[].importPath string
+$.candidates[].kind string
+$.candidates[].provider string
+$.candidates[].root string
+$.candidates[].source string
+$.candidates[].target string
+$.candidates[].title string
+$.candidates[].transform string
+$.root string
+$.transform string

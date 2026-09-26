@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/threadgrid/threadpoint/security/policy
+    about: Report vulnerabilities privately. Do not post secrets, private memory, local paths, backup payloads, or sensitive diffs in public issues.
+  - name: Contributing guide
+    url: https://github.com/threadgrid/threadpoint/blob/main/CONTRIBUTING.md
+    about: Read setup, DCO, provider-neutrality, fixture provenance, and pull request expectations.

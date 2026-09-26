@@ -1,0 +1,16 @@
+$.backupPath string
+$.backupRun string
+$.candidates[] array
+$.candidates[].backupPath string
+$.candidates[].backupRun string
+$.candidates[].currentSha256 string
+$.candidates[].diff string
+$.candidates[].path string
+$.candidates[].reason string
+$.candidates[].role string
+$.candidates[].root string
+$.candidates[].sha256 string
+$.candidates[].status string
+$.candidates[].target string
+$.operation string
+$.root string
