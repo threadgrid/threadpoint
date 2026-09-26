@@ -1,0 +1,168 @@
+name: Publish release
+
+on:
+  workflow_run:
+    workflows:
+      - Release candidate
+    types:
+      - completed
+
+permissions: {}
+
+concurrency:
+  group: release-publish-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Verify, sign, attest, and publish
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      actions: read
+      attestations: write
+      contents: write
+      id-token: write
+    steps:
+      # workflow_run executes this workflow definition from the default branch.
+      # Explicitly retain that trusted controller generation; tagged code is
+      # never checked out or executed as workflow control code in this job.
+      - name: Check out trusted release controller
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.workflow_sha }}
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Bind candidate and controller to green main commits
+        id: candidate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONTROLLER_SHA: ${{ github.workflow_sha }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --force origin main '+refs/tags/v*:refs/tags/v*'
+          test "$(git rev-parse HEAD)" = "${CONTROLLER_SHA}"
+          mapfile -t tags < <(git tag --points-at "${HEAD_SHA}" | grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$' || true)
+          if [[ "${#tags[@]}" -ne 1 ]]; then
+            echo "Candidate SHA must have exactly one semver release tag" >&2
+            exit 1
+          fi
+          tag="${tags[0]}"
+          test "$(git rev-parse "${tag}^{commit}")" = "${HEAD_SHA}"
+          git merge-base --is-ancestor "${HEAD_SHA}" "${CONTROLLER_SHA}"
+          git merge-base --is-ancestor "${CONTROLLER_SHA}" origin/main
+          required_green_shas=("${HEAD_SHA}")
+          if [[ "${CONTROLLER_SHA}" != "${HEAD_SHA}" ]]; then
+            required_green_shas+=("${CONTROLLER_SHA}")
+          fi
+          for required_sha in "${required_green_shas[@]}"; do
+            green_count="$(gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
+              -f head_sha="${required_sha}" -f status=success | \
+              jq --arg sha "${required_sha}" \
+                '[.workflow_runs[] | select(.event == "push" and .head_branch == "main" and .head_sha == $sha and .conclusion == "success")] | length')"
+            if [[ "${green_count}" -lt 1 ]]; then
+              echo "Required SHA ${required_sha} has no successful main-branch CI run" >&2
+              exit 1
+            fi
+          done
+          {
+            printf 'tag=%s\n' "${tag}"
+            printf 'version=%s\n' "${tag#v}"
+            printf 'sha=%s\n' "${HEAD_SHA}"
+            printf 'artifact=threadpoint-release-candidate-%s\n' "${tag}"
+          } >>"${GITHUB_OUTPUT}"
+
+      - name: Download exact candidate from powerless workflow
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUEST_RUN_ID: ${{ github.event.workflow_run.id }}
+          CANDIDATE_ARTIFACT: ${{ steps.candidate.outputs.artifact }}
+        run: |
+          set -euo pipefail
+          mkdir candidate
+          gh run download "${REQUEST_RUN_ID}" --name "${CANDIDATE_ARTIFACT}" --dir candidate
+
+      - name: Verify tag-context archive provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.candidate.outputs.tag }}
+          RELEASE_SHA: ${{ steps.candidate.outputs.sha }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          archives=(candidate/threadpoint_*.tar.gz)
+          if [[ "${#archives[@]}" -ne 4 ]]; then
+            echo "Expected exactly four release archives, found ${#archives[@]}" >&2
+            exit 1
+          fi
+          for archive in "${archives[@]}"; do
+            gh attestation verify "$archive" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+              --source-ref "refs/tags/${RELEASE_TAG}" \
+              --source-digest "${RELEASE_SHA}"
+          done
+
+      - name: Build trusted checksum signer
+        run: go build -trimpath -o "${RUNNER_TEMP}/threadpoint-release-signature" ./cmd/threadpoint-release-signature
+
+      - name: Sign candidate checksums with protected key
+        env:
+          THREADPOINT_RELEASE_SIGNING_PRIVATE_KEY: ${{ secrets.THREADPOINT_RELEASE_SIGNING_PRIVATE_KEY }}
+        run: >-
+          "${RUNNER_TEMP}/threadpoint-release-signature"
+          --in candidate/checksums.txt
+          --out candidate/checksums.txt.sig
+          --key-id release-2026-07-09
+
+      - name: Re-smoke the exact signed candidate
+        env:
+          THREADPOINT_DIST_DIR: candidate
+          THREADPOINT_SMOKE_VERSION: ${{ steps.candidate.outputs.tag }}
+        run: scripts/smoke-release-artifacts.sh
+
+      - name: Create draft release from smoked files
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.candidate.outputs.tag }}
+          RELEASE_SHA: ${{ steps.candidate.outputs.sha }}
+        run: |
+          set -euo pipefail
+          release_flags=(--draft --verify-tag --target "${RELEASE_SHA}" --generate-notes --title "threadpoint ${RELEASE_TAG}")
+          if [[ "${RELEASE_TAG}" == *-* ]]; then
+            release_flags+=(--prerelease)
+          fi
+          gh release create "${RELEASE_TAG}" "${release_flags[@]}" \
+            candidate/threadpoint_*.tar.gz \
+            candidate/checksums.txt \
+            candidate/checksums.txt.sig
+
+      # workflow_run executes from the default branch, so this attestation
+      # intentionally records publisher-controller provenance for the signed
+      # checksum manifest rather than claiming tag-workflow provenance.
+      - name: Attest signed checksum manifest
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
+        with:
+          subject-path: candidate/checksums.txt
+
+      - name: Publish fully verified draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.candidate.outputs.tag }}
+        run: gh release edit "${RELEASE_TAG}" --draft=false

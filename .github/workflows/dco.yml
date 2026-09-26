@@ -1,0 +1,50 @@
+name: DCO
+
+on:
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: dco-${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dco:
+    name: DCO sign-off
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Verify Developer Certificate of Origin sign-off
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          # Non-merge commits introduced by the PR must each carry a well-formed
+          # Signed-off-by trailer (see CONTRIBUTING.md: git commit -s).
+          while IFS= read -r sha; do
+            [ -n "$sha" ] || continue
+            signoff="$(git show -s --format='%(trailers:key=Signed-off-by,valueonly)' "$sha")"
+            if printf '%s' "$signoff" | grep -qE '.+ <[^>]+@[^>]+>'; then
+              continue
+            fi
+            subject="$(git show -s --format='%s' "$sha")"
+            echo "::error::commit ${sha} (${subject}) is missing a Developer Certificate of Origin sign-off."
+            missing=1
+          done < <(git rev-list --no-merges "${BASE_SHA}..${HEAD_SHA}")
+          if [ "${missing}" -ne 0 ]; then
+            echo "One or more commits lack a 'Signed-off-by:' trailer." >&2
+            echo "Add it with 'git commit -s' (or 'git rebase --signoff <base>'); see CONTRIBUTING.md." >&2
+            exit 1
+          fi
+          echo "All PR commits carry a DCO Signed-off-by trailer."

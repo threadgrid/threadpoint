@@ -1,0 +1,5 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // Synthetic fixture for manual-review config coverage.
+  "share": "disabled",
+}

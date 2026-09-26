@@ -1,0 +1,297 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # pnpm must be provisioned before setup-node's cache can resolve the
+      # package-manager store path.
+      - name: Set up pnpm
+        run: make setup
+
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install formatter dependencies
+        run: make ci-install
+
+      - name: Set up Go for native formatter installation
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install native formatters
+        run: scripts/install-ci-formatters.sh "${RUNNER_TEMP}/threadpoint-formatters"
+
+      - name: Check formatting
+        run: make format-check
+
+  go-quality:
+    name: Go quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check Go formatting
+        shell: bash
+        run: |
+          mapfile -t go_files < <(find . -name '*.go' -not -path './dist/*' -print)
+          unformatted="$(gofmt -l "${go_files[@]}")"
+          if [[ -n "${unformatted}" ]]; then
+            echo "Go files are not gofmt-formatted:" >&2
+            echo "${unformatted}" >&2
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run tests with coverage
+        shell: bash
+        run: |
+          set -o pipefail
+          go test -race -json -coverpkg=./... -coverprofile=coverage.out ./... | tee test-results.json
+
+      - name: Summarize coverage
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f coverage.out ]]; then
+            go tool cover -func=coverage.out | tee coverage-summary.txt
+          else
+            echo "coverage.out was not generated" > coverage-summary.txt
+          fi
+
+      - name: Enforce coverage threshold
+        run: sh scripts/check-coverage.sh coverage.out
+
+      - name: Build CLI
+        run: go build -o /tmp/threadpoint ./cmd/threadpoint
+
+      - name: Check dependency licenses
+        env:
+          THREADPOINT_LICENSE_REPORT_DIR: license-reports
+        run: scripts/check-licenses.sh
+
+      - name: Check network egress allowlist
+        run: scripts/check-network-egress.sh
+
+      - name: Check no local diagnostic logging
+        run: scripts/check-no-local-logging.sh
+
+      - name: Check docs links and regression tests
+        run: make docs-links
+
+      - name: Public repository sweep
+        run: scripts/check-public-repo-sweep.sh
+
+      - name: Install installer test shells
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fish zsh
+
+      - name: Test installer archive safety
+        run: scripts/test-installer-archive-safety.sh
+
+      - name: Test workflow supply-chain safety
+        run: scripts/test-workflow-supply-chain.sh
+
+      - name: Check SonarQube configuration
+        run: scripts/check-sonar-configuration.sh
+
+      - name: Upload quality artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: go-quality-artifacts
+          path: |
+            test-results.json
+            coverage.out
+            coverage-summary.txt
+            license-reports/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  sonar:
+    name: SonarQube
+    needs:
+      - go-quality
+    if: >-
+      ${{ github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+          github.actor != 'dependabot[bot]') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Verify SonarQube credentials
+        env:
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          test -n "$SONAR_ORGANIZATION"
+          test -n "$SONAR_TOKEN"
+
+      - name: Check out repository with complete history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve Go version from the scanner image
+        id: sonar_go
+        run: |
+          go_image_tag="$(sed -nE 's|^FROM golang:([^@]+)@sha256:.*$|\1|p' .sonar/Dockerfile)"
+          test -n "$go_image_tag"
+          test "$(printf '%s\n' "$go_image_tag" | wc -l)" -eq 1
+          go_version="${go_image_tag%%-*}"
+          [[ "$go_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          printf 'version=%s\n' "$go_version" >> "$GITHUB_OUTPUT"
+
+      # SonarQube requires Go on the scan host when importing Go coverage.
+      - name: Set up Go for coverage import
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: ${{ steps.sonar_go.outputs.version }}
+          cache: false
+
+      - name: Download coverage
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: go-quality-artifacts
+          path: .
+
+      - name: Verify analysis input
+        run: test -s coverage.out
+
+      - name: Run blocking SonarQube Cloud analysis
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          scannerVersion: 8.0.1.6346
+          args: >-
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Run golangci-lint
+        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run
+
+  supported-platform:
+    name: Supported platform (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests
+        run: go test ./...
+        env:
+          TMPDIR: ${{ runner.temp }}
+
+      - name: Build CLI
+        run: go build -o ${{ runner.temp }}/threadpoint ./cmd/threadpoint
+
+  # The go-quality and supported-platform jobs build with the pinned go.mod
+  # toolchain; this job adds forward-compatibility coverage on the latest stable
+  # Go so newer-toolchain regressions surface early.
+  go-compat:
+    name: Go compatibility (latest stable)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build CLI
+        run: go build -o ${{ runner.temp }}/threadpoint ./cmd/threadpoint
+
+  vulnerability-scan:
+    name: Vulnerability scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.4.0 ./...

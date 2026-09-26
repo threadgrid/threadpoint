@@ -1,0 +1,131 @@
+name: Release candidate
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to dry-run. Defaults to the selected workflow ref."
+        required: false
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: release-candidate-${{ github.event_name }}-${{ github.ref }}-${{ inputs.ref || '' }}
+  cancel-in-progress: false
+
+jobs:
+  dry-run:
+    name: GoReleaser dry run
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out requested source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check dependency licenses
+        run: scripts/check-licenses.sh
+
+      - name: Build snapshot candidate once
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --clean --skip=publish
+
+      - name: Smoke unsigned snapshot candidate
+        env:
+          THREADPOINT_SMOKE_SKIP_SIGNATURE: "1"
+        run: scripts/smoke-release-artifacts.sh
+
+      - name: Upload smoke candidate
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: threadpoint-release-dry-run
+          path: |
+            dist/*.tar.gz
+            dist/checksums.txt
+            dist/smoke/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  candidate:
+    name: Build release candidate without publication authority
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate release tag syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
+            echo "Release tags must be semver v-tags like v0.1.0 or v0.1.0-rc.1" >&2
+            exit 1
+          fi
+          test "$(git rev-parse "${GITHUB_REF_NAME}^{commit}")" = "${GITHUB_SHA}"
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check dependency licenses
+        run: scripts/check-licenses.sh
+
+      - name: Build release candidate once
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean --skip=publish
+
+      - name: Smoke unsigned release candidate
+        env:
+          THREADPOINT_SMOKE_SKIP_SIGNATURE: "1"
+          THREADPOINT_SMOKE_VERSION: ${{ github.ref_name }}
+        run: scripts/smoke-release-artifacts.sh
+
+      # This runs in the tag push context, so the provenance source ref is the
+      # exact release tag whose code produced these archive bytes.
+      - name: Attest exact tag-built release archives
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
+        with:
+          subject-checksums: dist/checksums.txt
+
+      - name: Upload exact release candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: threadpoint-release-candidate-${{ github.ref_name }}
+          path: |
+            dist/*.tar.gz
+            dist/checksums.txt
+            dist/smoke/
+          if-no-files-found: error
+          retention-days: 14

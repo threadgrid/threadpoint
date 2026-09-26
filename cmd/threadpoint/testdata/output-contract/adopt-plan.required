@@ -1,0 +1,17 @@
+$.actions[] array
+$.actions[].kind string
+$.actions[].root string
+$.artifacts[] array
+$.artifacts[].absPath string
+$.artifacts[].kind string
+$.artifacts[].path string
+$.artifacts[].provider string
+$.artifacts[].readMode string
+$.artifacts[].root string
+$.artifacts[].sha256 string
+$.excludeProviders[] array
+$.excludeProviders[] string
+$.providerSelectionExplicit bool
+$.providers[] array
+$.providers[] string
+$.root string

@@ -1,0 +1,11 @@
+$.records[] array
+$.records[].id string
+$.records[].kind string
+$.records[].paths[] array
+$.records[].paths[] string
+$.records[].sources[] array
+$.records[].sources[].native bool
+$.records[].sources[].path string
+$.records[].sources[].provider string
+$.records[].title string
+$.root string
