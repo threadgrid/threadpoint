@@ -1,0 +1,18 @@
+# Test and coverage outputs
+coverage.out
+coverage-summary.txt
+test-results.json
+
+# SonarQube local scanner output
+.scannerwork/
+
+# Node formatter tooling
+node_modules/
+.pnpm-store/
+
+# Local scratch state
+/.tmp/
+
+# Canonical project-local agent memory
+/AGENTS.local.md
+/.agents.local/

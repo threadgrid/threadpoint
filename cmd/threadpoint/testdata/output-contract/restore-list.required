@@ -1,0 +1,14 @@
+$[] array
+$[].createdAt string
+$[].entries[] array
+$[].entries[].backupPath string
+$[].entries[].path string
+$[].entries[].role string
+$[].entries[].root string
+$[].entries[].sha256 string
+$[].entries[].size number
+$[].operation string
+$[].path string
+$[].projectId string
+$[].projectRoot string
+$[].runId string

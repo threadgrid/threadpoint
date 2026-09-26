@@ -1,0 +1,8 @@
+node_modules/
+.pnpm-store/
+.tmp/
+coverage.out
+coverage-summary.txt
+test-results.json
+dist/
+pnpm-lock.yaml

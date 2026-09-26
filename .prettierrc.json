@@ -1,0 +1,18 @@
+{
+  "endOfLine": "lf",
+  "proseWrap": "preserve",
+  "overrides": [
+    {
+      "files": "*.mdc",
+      "options": {
+        "parser": "markdown"
+      }
+    },
+    {
+      "files": ".cursorrules",
+      "options": {
+        "parser": "markdown"
+      }
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+# Pragmatic ruleset: the standard linters (errcheck, govet, ineffassign,
+# staticcheck, unused) plus high-signal correctness and contract checks.
+# SQL-specific linters are intentionally omitted; threadpoint does not use
+# database/sql. Package and exported-symbol documentation is part of the public
+# Go API contract.
+linters:
+  default: standard
+  enable:
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - copyloopvar
+    - dupword
+    - durationcheck
+    - errorlint
+    - errchkjson
+    - errname
+    - fatcontext
+    - gocheckcompilerdirectives
+    - goconst
+    - gocritic
+    - goprintffuncname
+    - gosec
+    - makezero
+    - mirror
+    - misspell
+    - musttag
+    - nilnesserr
+    - nilerr
+    - nilnil
+    - nolintlint
+    - noctx
+    - nosprintfhostport
+    - predeclared
+    - reassign
+    - recvcheck
+    - tagalign
+    - testableexamples
+    - thelper
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - wastedassign
+    - whitespace
+  settings:
+    goconst:
+      min-len: 3
+      min-occurrences: 10
+    staticcheck:
+      checks:
+        - all
+  exclusions:
+    presets:
+      - std-error-handling
+    rules:
+      # Gosec exclusions are deliberately rule-scoped. Do not add broad
+      # file-wide gosec suppressions; add the reviewed rule ID and rationale
+      # next to each exception so new gosec findings remain visible.
+      # Provider catalogs, wire shims, and CLI help are intentionally stringly
+      # data; constants would obscure those contracts more than clarify them.
+      - path: provider/provider.go
+        linters:
+          - goconst
+      - path: cmd/threadpoint/cli.go
+        linters:
+          - goconst
+      - path: cmd/threadpoint/uninstall.go
+        linters:
+          - goconst
+      # Command help, subcommand dispatch, and the installer helper protocol are
+      # the same stringly CLI and wire contracts: distinct commands and protocol
+      # steps share spellings such as `commit`, `status`, and `list`, so a shared
+      # constant would couple unrelated contracts.
+      - path: cmd/threadpoint/(command_help|commands|stage_commands|self_update|update_reminders|install_lock_helper)\.go
+        linters:
+          - goconst
+      - path: '(.+)_test\.go'
+        linters:
+          - goconst
+      # Test fixtures intentionally use public perms, synthetic secrets, tainted
+      # temp paths, and executable helper scripts. Other gosec rules still run.
+      - path: '(.+)_test\.go'
+        text: "G(101|204|301|302|304|306|703):"
+        linters:
+          - gosec
+      # Production gosec suppressions must be inline #nosec comments with the
+      # reviewed rule ID and rationale at the call site.

@@ -1,0 +1,115 @@
+version: 2
+
+project_name: threadpoint
+
+snapshot:
+  version_template: "0.0.0-SNAPSHOT"
+
+builds:
+  - id: threadpoint
+    main: ./cmd/threadpoint
+    binary: bin/threadpoint
+    env:
+      - CGO_ENABLED=0
+    # Reproducible builds: -trimpath strips local paths, the embedded version
+    # metadata is derived from the commit (not wall-clock build time), and
+    # mod_timestamp pins archive timestamps. The tag candidate workflow builds
+    # and attests this generation once; the trusted publisher verifies, signs,
+    # re-smokes, and publishes those exact archives without rebuilding them.
+    flags:
+      - -trimpath
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    ldflags:
+      - -s -w -X main.version={{ .Version }} -X main.commit={{ .Commit }} -X main.date={{ .CommitDate }}
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: threadpoint
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    formats:
+      - tar.gz
+    files:
+      - README.md
+      - LICENSE
+      - NOTICE
+      - scripts/install.sh
+      - scripts/uninstall.sh
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  use: git
+  sort: asc
+
+release:
+  prerelease: auto
+  mode: replace
+  footer: |
+    ## Install
+
+    Install the tagged version with Go:
+
+    ```bash
+    go install github.com/threadgrid/threadpoint/cmd/threadpoint@{{ .Tag }}
+    ```
+
+    Install the tagged Linux or macOS release with the installer script. The
+    installer checks the current threadpoint release policy before downloading
+    release artifacts:
+
+    ```bash
+    curl -fsSL "https://raw.githubusercontent.com/threadgrid/threadpoint/{{ .Tag }}/scripts/install.sh" | sh -s -- --version "{{ .Tag }}" --dir "$HOME/.local/bin"
+    ```
+
+    Release archives, `checksums.txt`, and `checksums.txt.sig` are attached to
+    this GitHub Release. Verify the checksum signature and downloaded archives
+    before extracting or installing released binaries.
+
+    ```bash
+    archive=threadpoint_{{ .Version }}_linux_amd64.tar.gz
+    curl -fsSLO "https://github.com/threadgrid/threadpoint/releases/download/{{ .Tag }}/${archive}"
+    curl -fsSLO "https://github.com/threadgrid/threadpoint/releases/download/{{ .Tag }}/checksums.txt"
+    curl -fsSLO "https://github.com/threadgrid/threadpoint/releases/download/{{ .Tag }}/checksums.txt.sig"
+    go run github.com/threadgrid/threadpoint/cmd/threadpoint-release-signature@{{ .Tag }} --verify --in checksums.txt --out checksums.txt.sig
+    awk -v file="$archive" '$2 == file { print; found = 1 } END { if (!found) exit 1 }' checksums.txt | sha256sum --check -
+    tar -xzf "$archive"
+    install -m 0755 "${archive%.tar.gz}/bin/threadpoint" "$HOME/.local/bin/threadpoint"
+    ```
+
+    Replace `archive` with the Linux or macOS archive for your platform. On
+    macOS without `sha256sum`, compare the selected archive digest with
+    `shasum -a 256` and the matching `checksums.txt` entry.
+
+    GitHub Artifact Attestations are published for release archives and
+    `checksums.txt`. After downloading an archive, verify each subject with its
+    expected repository, workflow, and source ref:
+
+    ```bash
+    gh attestation verify "${archive}" \
+      -R threadgrid/threadpoint \
+      --signer-repo threadgrid/threadpoint \
+      --signer-workflow threadgrid/threadpoint/.github/workflows/release.yml \
+      --source-ref refs/tags/{{ .Tag }}
+
+    gh attestation verify checksums.txt \
+      -R threadgrid/threadpoint \
+      --signer-repo threadgrid/threadpoint \
+      --signer-workflow threadgrid/threadpoint/.github/workflows/release-publish.yml \
+      --source-ref refs/heads/main
+    ```
+
+    Checksums verify archive integrity against signed release metadata. Artifact
+    attestations verify GitHub Actions provenance for the attested subjects. Do
+    not assume SBOMs unless this release explicitly publishes and documents them.
+
+    threadpoint v0.1.0 commands operate on the selected `--root` project and
+    threadpoint-owned state. See `CHANGELOG.md` in the repository for the
+    project-scope cutover, migration note, initial release note, and compatibility
+    statement.

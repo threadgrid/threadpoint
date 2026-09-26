@@ -1,0 +1,82 @@
+name: Bug report
+description: Report a reproducible threadpoint bug.
+title: "Bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for normal public bugs. Do not include secrets, private
+        memory, local filesystem paths, backup payloads, proprietary project
+        content, or sensitive diffs. Security issues should follow SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: threadpoint version
+      description: Run `threadpoint version` or provide the tag, commit, or install source.
+      placeholder: v0.1.0, main at commit ..., or unknown
+    validations:
+      required: true
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Install method
+      options:
+        - go install
+        - install.sh
+        - release archive
+        - built from source
+        - other or unknown
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: Include OS and architecture.
+      placeholder: macOS arm64, Linux amd64
+    validations:
+      required: true
+  - type: input
+    id: affected_support
+    attributes:
+      label: Affected supported agent, provider, or artifact (if relevant)
+      description: Name the public agent/provider and project-native artifact that the bug affects. Do not include private or absolute local paths.
+      placeholder: Example Agent v1.2, .example/AGENTS.md
+  - type: textarea
+    id: command
+    attributes:
+      label: Command or workflow
+      description: Show the command or workflow that reproduces the bug. Redact local paths and private content.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should threadpoint have done?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Redact sensitive output before posting.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide a small synthetic or public example if possible.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Public issue safety
+      options:
+        - label: I removed secrets, private memory, local paths, backup payloads, proprietary content, and sensitive diffs.
+          required: true
+        - label: This is not a vulnerability report or release-integrity issue that should use SECURITY.md.
+          required: true

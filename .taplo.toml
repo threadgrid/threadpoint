@@ -1,0 +1,10 @@
+include = ["**/*.toml"]
+exclude = ["node_modules/**", ".pnpm-store/**", ".tmp/**", "dist/**"]
+
+[formatting]
+column_width = 80
+indent_string = "  "
+trailing_newline = true
+reorder_keys = false
+reorder_arrays = false
+crlf = false

@@ -1,0 +1,5 @@
+$.issues[] array
+$.issues[].message string
+$.issues[].path string
+$.ok bool
+$.root string

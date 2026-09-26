@@ -1,0 +1,8 @@
+# Default owners.
+* @threadgrid/maintainers
+
+# Keep sensitive paths explicitly owned if the default changes.
+/.github/ @threadgrid/maintainers
+/.goreleaser.yml @threadgrid/maintainers
+/scripts/ @threadgrid/maintainers
+/SECURITY.md @threadgrid/maintainers

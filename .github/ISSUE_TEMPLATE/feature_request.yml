@@ -1,0 +1,72 @@
+name: Feature request
+description: Suggest a threadpoint feature or workflow improvement.
+title: "Feature: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for public threadpoint feature requests. Do not include
+        private project content, private memory, proprietary content, or
+        sensitive local paths.
+  - type: dropdown
+    id: request_type
+    attributes:
+      label: Request type
+      description: New agent/provider and project-native artifact support are standard feature requests.
+      options:
+        - Support a new agent or provider
+        - Support another project-native artifact
+        - Improve an existing workflow or behavior
+        - Improve documentation or examples
+        - Other feature request
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: User workflow or problem
+      description: What are you trying to do with threadpoint?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What should threadpoint add or change?
+    validations:
+      required: true
+  - type: textarea
+    id: support_details
+    attributes:
+      label: Agent, provider, or artifact details (for support requests)
+      description: For a support request, name the public agent/provider and version, link its public documentation, and describe the project-native artifact. Include only a public project-relative path or pattern and synthetic/redacted examples; never include an absolute path, private project content, or sensitive data.
+  - type: textarea
+    id: provider_neutrality
+    attributes:
+      label: Provider-neutral fit
+      description: How should this remain local-first and provider-neutral?
+    validations:
+      required: true
+  - type: textarea
+    id: data_and_privacy
+    attributes:
+      label: Data and privacy considerations
+      description: Note any local files, provider artifacts, network access, or sensitive data this feature would touch.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. Existing commands, docs, or workflows you tried.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Public issue safety
+      options:
+        - label: I did not include secrets, private memory, local paths, backup payloads, proprietary content, or sensitive diffs.
+          required: true
+        - label: This request is for public threadpoint behavior and does not rely on non-threadpoint product features.
+          required: true
