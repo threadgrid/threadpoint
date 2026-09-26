@@ -115,7 +115,7 @@ jobs:
       # This runs in the tag push context, so the provenance source ref is the
       # exact release tag whose code produced these archive bytes.
       - name: Attest exact tag-built release archives
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-checksums: dist/checksums.txt
 
