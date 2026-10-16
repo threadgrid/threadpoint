@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "managed_by": "feature-requirements-manifest",
+  "layout": "agents",
+  "requirements": [
+    {
+      "id": "provider-neutral-records",
+      "feature_id": "knowledgebase-model",
+      "required": true,
+      "criticality": "high",
+      "rationale": "Threadpoint exists so multiple agent types can share one knowledgebase, so records must not require one provider's native file format. Scan records stay in knowledgebase.Catalog while canonical path names and layout mutation or validation stay in layout."
+    },
+    {
+      "id": "preserve-provider-source",
+      "feature_id": "provider-bridge-detection",
+      "required": true,
+      "criticality": "high",
+      "rationale": "Review and debugging need to know where each record came from, including whether its native filename declares a project-local canonical lane."
+    },
+    {
+      "id": "skills-use-portable-frontmatter",
+      "feature_id": "skill-frontmatter-parsing",
+      "required": true,
+      "criticality": "medium",
+      "rationale": "Portable frontmatter is the canonical shared skill metadata surface."
+    },
+    {
+      "id": "embedders-use-public-error-and-path-apis",
+      "feature_id": "public-embedder-api",
+      "required": true,
+      "criticality": "high",
+      "rationale": "Embedding applications need stable errors.Is/errors.As classification, shared path safety helpers, and reusable cooperative file locks instead of matching human-readable error text or copying internal implementations."
+    },
+    {
+      "id": "discovery-stages-artifacts",
+      "feature_id": "artifact-discovery",
+      "required": true,
+      "criticality": "high",
+      "rationale": "Provider-native artifacts must be discovered only below one selected root through registry-declared paths. Discovery must preserve a filename-declared local scope, reject unsafe file types and escapes, and remain read-only."
+    },
+    {
+      "id": "stage-commit-review",
+      "feature_id": "stage-commit",
+      "required": true,
+      "criticality": "high",
+      "rationale": "A stage must be a private, scope-pinned review copy of one bounded native source. Raw stage previews and user-configured interactive review tools may expose only that stage's local bytes. Commit must validate the selected root, source, fixed target, and Git scope; write only that target; record the reviewed source bytes; and remove only that exact stage after success."
+    },
+    {
+      "id": "backup-prune-restore-safety",
+      "feature_id": "backup-prune-restore",
+      "required": true,
+      "criticality": "high",
+      "rationale": "Commit, prune, and restore touch user files, so version-1 backups, bounded reads, pinned roots, no-replace mutation, explicit recovery records, and manifest-first state are required. Prune must use the latest successful commit's stage-source snapshot and refuse a source that has changed. Restore must refuse unsupported manifests before mutation."
+    },
+    {
+      "id": "doctor-is-non-mutating",
+      "feature_id": "doctor-diagnostics",
+      "required": true,
+      "criticality": "medium",
+      "rationale": "Diagnostics should be safe to run before deciding whether to stage, commit, prune, or restore. Status must retain the doctor Go package and reusable scan.Run and layout.Validate APIs while replacing scan and validate CLI commands. Inventory, structural validation, and detailed workflow observations must have separate completeness indicators. Pending work is informational, warnings degrade readiness, and errors block readiness and exit 3. Default text lists shared and local records; source hashes and saved stages must be inspected without mutation."
+    },
+    {
+      "id": "local-cli-runtime",
+      "feature_id": "threadpoint-cli",
+      "required": true,
+      "criticality": "high",
+      "rationale": "Threadpoint should expose implemented local operational commands with deterministic help, public glossary and layout references, exact logical explicit project-root handling, canonical/Git implicit root discovery, rejection of empty explicit roots, selected-root feedback for init, guarded provider workspace-marker fallback with --root remediation for a strong ancestor conflict, and rejection of protected home and user .agents roots. Command naming uses singular groups and list subcommands; explicit and text-mode bare-group help perform no prompts, network, or state writes. JSON-mode bare groups require subcommands and return structured errors on stderr with exit 2. Restore list JSON labels absolute project and state-home paths without changing stored backup records."
+    },
+    {
+      "id": "cli-diagnostics-are-output-only",
+      "feature_id": "threadpoint-cli",
+      "required": true,
+      "criticality": "high",
+      "rationale": "Threadpoint's public local-first trust model is easier to audit when diagnostics are explicit command output rather than ambient persisted logs. The CLI must not add THREADPOINT_LOG_LEVEL, threadpoint.log.jsonl, or a local log writer without a new documented support contract."
+    },
+    {
+      "id": "diagnostic-outcomes-are-codified",
+      "feature_id": "diagnostic-outcome-contract",
+      "required": true,
+      "criticality": "high",
+      "rationale": "Automation must receive finite unprefixed snake_case codes and stable human messages while preserving readable text output. Public contracts must use rationale only for human decisions, redact bounded detail, and reject retired reason, errorCode, and category fields without a migration or compatibility reader."
+    },
+    {
+      "id": "installer-managed-binaries-use-product-home",
+      "feature_id": "threadpoint-installer-distribution",
+      "required": true,
+      "criticality": "high",
+      "rationale": "Installer-managed threadpoint releases must document pipe-to-shell installer guidance, enforce the current release-policy installer floor and blocklist before artifact download, verify signed checksums and GitHub Artifact Attestations before install/update, accept the versioned wrapped release archive layout with bin/threadpoint inside the top-level bundle, keep the managed bundle under THREADPOINT_HOME or $HOME/.threadpoint, expose the command through a selected command-directory symlink, and use metadata under the resolved threadpoint home to prove ownership before update or uninstall. Command directories containing colons must fail before downloads or installation writes. PATH instructions must preserve existing entries without adding an empty entry, recognize equivalent directory paths, retain the selected logical directory in guidance, and leave shell configuration unchanged."
+    },
+    {
+      "id": "release-retention-clips-old-assets-by-channel",
+      "feature_id": "threadpoint-release-retention",
+      "required": true,
+      "criticality": "high",
+      "rationale": "Official threadpoint binary distribution must clip old releases with a channel-aware policy: stable and preview releases are counted separately, latest plus two previous releases remain available per channel, clipped versions stay blocked by installer policy, release assets can be removed where possible, and public tags, source archives, copied binaries, and source builds remain outside the installer control plane."
+    },
+    {
+      "id": "public-go-api-is-documented-and-pre-v1",
+      "feature_id": "go-api-documentation",
+      "required": true,
+      "criticality": "high",
+      "rationale": "The exact allowlisted top-level threadpoint package set is the supported public Go API before v1 and must remain discoverable through package comments, exported declaration comments, and executable examples. The public contract must state that minor releases may change these APIs before v1, while cmd and internal packages remain unsupported implementation surfaces."
+    },
+    {
+      "id": "quality-analysis-is-attributed-and-fork-safe",
+      "feature_id": "quality-analysis",
+      "required": true,
+      "criticality": "high",
+      "rationale": "Quality analysis must import the existing Go coverage report, block trusted same-repository pull requests and main updates on the configured quality gate, skip the token-bearing job for fork and dependency-bot pull requests whose trust context does not receive Actions secrets, and keep the organization and token outside the public tree. Local uploads must use a tracked revision snapshot in the digest-pinned, unprivileged, read-only scanner without mounting ignored local files, and reject dirty, detached, shallow, unpushed, or unattributed revisions."
+    },
+    {
+      "id": "contributions-use-apache-dco",
+      "feature_id": "contribution-policy",
+      "required": true,
+      "criticality": "medium",
+      "rationale": "Public contributions need clear Apache-2.0 inbound licensing and lightweight provenance certification without adding normal pull request CLA friction."
+    }
+  ]
+}

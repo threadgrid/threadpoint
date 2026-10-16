@@ -1,0 +1,256 @@
+{
+  "version": 1,
+  "managed_by": "feature-requirements-manifest",
+  "layout": "agents",
+  "features": [
+    {
+      "id": "knowledgebase-model",
+      "title": "Knowledgebase And Layout Models",
+      "summary": "Threadpoint exposes provider-neutral knowledgebase records through knowledgebase.Catalog and keeps canonical path names, validation reports, and safe layout creation in the separate layout package.",
+      "surfaces": ["knowledgebase", "layout"],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "env GOWORK=off go test ./knowledgebase ./layout",
+          "label": "Knowledgebase and layout package tests pass"
+        }
+      ]
+    },
+    {
+      "id": "provider-bridge-detection",
+      "title": "Provider Bridge Detection",
+      "summary": "Threadpoint detects Codex, Claude, Copilot, and generic AGENTS bridge surfaces while preserving provider metadata, including filename-declared canonical scope for provider-native artifacts.",
+      "surfaces": ["provider", "scan"],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "env GOWORK=off go test ./provider ./scan",
+          "label": "Provider and scan tests pass"
+        }
+      ]
+    },
+    {
+      "id": "skill-frontmatter-parsing",
+      "title": "Skill Frontmatter Parsing",
+      "summary": "Threadpoint parses portable SKILL.md frontmatter into shared skill metadata.",
+      "surfaces": ["skill"],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "env GOWORK=off go test ./skill",
+          "label": "Skill parser tests pass"
+        }
+      ]
+    },
+    {
+      "id": "public-embedder-api",
+      "title": "Public Embedder API",
+      "summary": "Threadpoint exposes public error classification, path sanitization, reusable cooperative file locks, and reusable filesystem safety helpers for embedding applications. Review subprocess APIs require explicit streams and never inherit process streams implicitly.",
+      "surfaces": ["clierror", "safepath", "backup", "safefs"],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "env GOWORK=off go test ./clierror ./safepath ./backup ./safefs",
+          "label": "Public embedder API tests pass"
+        }
+      ]
+    },
+    {
+      "id": "artifact-discovery",
+      "title": "Artifact Discovery",
+      "summary": "Threadpoint safely inventories provider-native artifacts below one selected root. Discovery uses registry-declared relative paths, regular-file and bounded-read checks, provider filters, and fixed filename-declared scope without writing project content or traversing a parent, home, or second root.",
+      "surfaces": ["discover", "provider", "cmd/threadpoint"],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "env GOWORK=off go test ./discover",
+          "label": "Discovery package tests pass"
+        }
+      ]
+    },
+    {
+      "id": "stage-commit",
+      "title": "Stage And Commit",
+      "summary": "Threadpoint stages bounded regular provider artifacts as private, scope-pinned review copies for one selected root. A reviewed stage can be diffed, edited, inspected through explicitly configured local diff and source-refresh merge tools, discarded, or committed to exactly one canonical target after scope and Git validation. Commit records the reviewed source snapshot, writes without replacing concurrent targets, and removes only the committed review copy.",
+      "surfaces": ["stage", "cmd/threadpoint"],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "env GOWORK=off go test ./stage",
+          "label": "Stage and commit package tests pass"
+        }
+      ]
+    },
+    {
+      "id": "backup-prune-restore",
+      "title": "Backup Prune And Restore",
+      "summary": "Threadpoint records version-1 backups for commit, prune, and restore under the resolved backup root. Prune and restore report finite code/message candidate outcomes, prune considers only stage-source snapshots recorded by a successful commit and removes a native artifact only when its current bytes and identity still match the latest snapshot, and restore accepts only the current manifest format and validates bounded payloads, targets, modes, and recovery operations before mutation. Ordinary store mutations require an explicitly reviewed manifest generation; pending commit evidence is published only as a complete atomic generation.",
+      "surfaces": ["backup", "prune", "restore", "cmd/threadpoint"],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "env GOWORK=off go test ./backup ./prune ./restore",
+          "label": "Backup prune and restore tests pass"
+        }
+      ]
+    },
+    {
+      "id": "doctor-diagnostics",
+      "title": "Doctor Diagnostics",
+      "summary": "Threadpoint status lists canonical shared and local inventory records and reports structural validation and detailed workflow observations in separate completeness-aware sections. Source hashing, saved review stages, backup age, commit-backed prune readiness, and scoped Git state are observed without mutation. Pending work is informational, warnings degrade readiness, and errors block readiness and exit 3. The doctor package, scan.Run, and layout.Validate remain reusable Go APIs; the scan and validate CLI commands are retired.",
+      "surfaces": ["doctor", "cmd/threadpoint"],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "env GOWORK=off go test ./doctor",
+          "label": "Doctor package tests pass"
+        }
+      ]
+    },
+    {
+      "id": "threadpoint-cli",
+      "title": "Threadpoint CLI",
+      "summary": "The CLI supports init, stage, commit, prune, restore, status, and doctor workflows with shared help, public reference links, one exact logical root per project command, canonical/Git implicit root discovery, rejection of empty explicit roots, selected-root feedback for init, guarded provider workspace-marker fallback, protected home and user .agents root rejection, an ignored project-local skill runtime seed, output-only finite code/message diagnostics, and no ambient local diagnostic log persistence. Uses singular command groups, restore list, and update reminder operations, with dedicated help at every depth and side-effect-free text-mode bare-group help. JSON-mode bare groups require subcommands; restore list JSON redacts absolute project and state-home paths.",
+      "surfaces": [
+        "cmd/threadpoint",
+        "project",
+        "docs/glossary.md",
+        "docs/canonical-layout-guide.md"
+      ],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "env GOWORK=off go test ./cmd/threadpoint",
+          "label": "Threadpoint CLI tests pass"
+        }
+      ]
+    },
+    {
+      "id": "diagnostic-outcome-contract",
+      "title": "Diagnostic Outcome Contract",
+      "summary": "Threadpoint uses finite unprefixed snake_case code/message outcomes, separate human rationale, redacted bounded detail, and an exact current output contract without legacy reason, errorCode, category, migration, or compatibility readers.",
+      "surfaces": [
+        "diagnostic",
+        "cmd/threadpoint",
+        "discover",
+        "doctor",
+        "prune",
+        "restore",
+        "docs/diagnostic-code-contract.md"
+      ],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "env GOWORK=off go test ./...",
+          "label": "Threadpoint outcome-contract tests pass"
+        }
+      ]
+    },
+    {
+      "id": "threadpoint-installer-distribution",
+      "title": "Threadpoint Installer Distribution",
+      "summary": "Threadpoint ships versioned wrapped Linux and macOS release archives with pipe-to-shell installer guidance, release-policy version floors and clipped-version blocklists for official installer installs, signed checksum files, GitHub Artifact Attestation verification, the binary under bin/threadpoint, release bundles under THREADPOINT_HOME or $HOME/.threadpoint, command exposure through symlinks, and ownership metadata for explicit update and uninstall commands. Installer command directories are validated before downloads, and copyable Bash, Zsh, and Fish PATH guidance recognizes equivalent directories without editing shell configuration; installer tests require all supported shells.",
+      "surfaces": [
+        ".goreleaser.yml",
+        ".github/workflows/release.yml",
+        "cmd/threadpoint-release-signature",
+        "internal/releasesig",
+        "release-policy.json",
+        "scripts/install.sh",
+        "scripts/smoke-release-artifacts.sh",
+        "scripts/uninstall.sh",
+        "cmd/threadpoint",
+        "docs/install.md",
+        "docs/supply-chain.md"
+      ],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "sh scripts/test-installer-archive-safety.sh",
+          "label": "Threadpoint installer archive safety tests pass"
+        }
+      ]
+    },
+    {
+      "id": "threadpoint-release-retention",
+      "title": "Threadpoint Release Retention",
+      "summary": "Threadpoint documents channel-aware old-release clipping for official installer and release-asset distribution while preserving public tags, release pages, source archives, copied binaries, and source-build paths.",
+      "surfaces": [
+        "release-policy.json",
+        "docs/install.md",
+        "docs/supply-chain.md"
+      ],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "sh scripts/test-installer-archive-safety.sh",
+          "label": "Threadpoint installer archive safety tests pass"
+        }
+      ]
+    },
+    {
+      "id": "go-api-documentation",
+      "title": "Go API Documentation",
+      "summary": "Threadpoint publishes package documentation and executable examples for every supported top-level Go package, exposes them through pkg.go.dev and local go doc preview, and documents the pre-v1 stability policy while enforcing package and exported-declaration comments across all production Go code.",
+      "surfaces": [
+        "docs/go-api.md",
+        "README.md",
+        "Makefile",
+        ".golangci.yml",
+        "internal/apicheck/api_doc_test.go",
+        "internal/apicheck/public_packages_test.go",
+        "knowledgebase/example_test.go",
+        "layout/example_test.go",
+        "scan/example_test.go",
+        "skill/example_test.go"
+      ],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "env GOWORK=off go test ./...",
+          "label": "Go examples and documentation contract tests pass"
+        },
+        {
+          "type": "command-exit-zero",
+          "command": "make lint",
+          "label": "Go documentation style checks pass"
+        }
+      ]
+    },
+    {
+      "id": "quality-analysis",
+      "title": "Quality Analysis",
+      "summary": "Maintainer-invoked and trusted same-repository CI scans analyze public Go source with imported test coverage, blocking quality-gate results, fork- and dependency-bot-safe token handling, complete SCM attribution, and a digest-pinned local Docker runner without changing ordinary local-first command behavior.",
+      "surfaces": [
+        "sonar-project.properties",
+        ".sonar/Dockerfile",
+        ".github/workflows/ci.yml",
+        ".github/branch-protection/main.json",
+        "scripts/run-sonar.sh",
+        "scripts/check-sonar-configuration.sh",
+        "Makefile",
+        "CONTRIBUTING.md"
+      ],
+      "verification": [
+        {
+          "type": "command-exit-zero",
+          "command": "make sonar-config",
+          "label": "Quality-analysis scope, pinning, and trust-boundary checks pass"
+        }
+      ]
+    },
+    {
+      "id": "contribution-policy",
+      "title": "Contribution Policy",
+      "summary": "Threadpoint documents Apache-2.0 inbound contributions, DCO sign-off, no normal CLA requirement, and provider-neutral pull request expectations.",
+      "surfaces": ["CONTRIBUTING.md", ".github/pull_request_template.md"],
+      "verification": [
+        {
+          "type": "path-exists",
+          "path": "CONTRIBUTING.md",
+          "label": "Contribution policy exists"
+        }
+      ]
+    }
+  ]
+}
