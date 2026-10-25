@@ -739,14 +739,14 @@ func (lock *installLifecycleLock) heartbeat() {
 	}
 }
 
+// rewriteInstallLockFile replaces an owner record in place. Writing before
+// trimming means a concurrent ownership check never reads an empty record, as
+// it could between a truncation and the following write.
 func rewriteInstallLockFile(file *os.File, body []byte) error {
-	if _, err := file.Seek(0, io.SeekStart); err != nil {
+	if _, err := file.WriteAt(body, 0); err != nil {
 		return err
 	}
-	if err := file.Truncate(0); err != nil {
-		return err
-	}
-	if _, err := file.Write(body); err != nil {
+	if err := file.Truncate(int64(len(body))); err != nil {
 		return err
 	}
 	return file.Sync()

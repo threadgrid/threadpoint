@@ -418,6 +418,94 @@ func TestInstallLifecycleLockHeartbeatPreventsLiveReclaim(t *testing.T) {
 	}
 }
 
+func TestRewriteInstallLockFileReplacesRecordInPlace(t *testing.T) {
+	const original = `{"heartbeat":"2026-08-06T00:00:00Z","token":"owner"}` + "\n"
+	for _, tc := range []struct {
+		name string
+		body string
+	}{
+		{name: "equal length", body: `{"heartbeat":"2026-08-06T00:00:01Z","token":"owner"}` + "\n"},
+		{name: "shorter", body: `{"token":"owner"}` + "\n"},
+		{name: "longer", body: `{"heartbeat":"2026-08-06T00:00:01.123456789Z","token":"owner"}` + "\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "owner.lock")
+			if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			file, err := os.OpenFile(path, os.O_RDWR, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer file.Close()
+			before, err := file.Stat()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := rewriteInstallLockFile(file, []byte(tc.body)); err != nil {
+				t.Fatal(err)
+			}
+			got, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.body {
+				t.Fatalf("rewritten record = %q, want %q", got, tc.body)
+			}
+			after, err := os.Stat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !os.SameFile(before, after) {
+				t.Fatal("rewrite replaced the lock file instead of updating it in place")
+			}
+		})
+	}
+}
+
+func TestRewriteInstallLockFileNeverExposesAnEmptyRecord(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "owner.lock")
+	records := [][]byte{
+		[]byte(`{"heartbeat":"2026-08-06T00:00:00Z","token":"owner"}` + "\n"),
+		[]byte(`{"heartbeat":"2026-08-06T00:00:01Z","token":"owner"}` + "\n"),
+	}
+	if err := os.WriteFile(path, records[0], 0o600); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.OpenFile(path, os.O_RDWR, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	stop := make(chan struct{})
+	emptyReads := make(chan int, 1)
+	go func() {
+		empty := 0
+		for {
+			select {
+			case <-stop:
+				emptyReads <- empty
+				return
+			default:
+			}
+			if body, err := os.ReadFile(path); err == nil && len(body) == 0 {
+				empty++
+			}
+		}
+	}()
+	for i := range 200 {
+		if err := rewriteInstallLockFile(file, records[i%2]); err != nil {
+			close(stop)
+			t.Fatal(err)
+		}
+	}
+	close(stop)
+	if empty := <-emptyReads; empty != 0 {
+		t.Fatalf("a concurrent reader saw an empty owner record %d times", empty)
+	}
+}
+
 func TestInstallLifecycleLockReclaimsDeadOwner(t *testing.T) {
 	productHome := filepath.Join(t.TempDir(), ".threadpoint")
 	commandPath := filepath.Join(t.TempDir(), threadpointProductName)
