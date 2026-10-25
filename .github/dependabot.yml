@@ -23,3 +23,8 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # The image tracks the go.mod toolchain; moving to a new Go minor is a
+      # deliberate toolchain upgrade, so only patch updates are proposed.
+      - dependency-name: golang
+        update-types: ["version-update:semver-minor"]

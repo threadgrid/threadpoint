@@ -1,5 +1,5 @@
 PNPM_VERSION := $(shell node -p "require('./package.json').packageManager.replace(/^pnpm@/, '')")
-SONAR_SCANNER_IMAGE := threadpoint-sonar-scanner:12.1.0.3233_8.0.1-go1.26.8
+SONAR_SCANNER_IMAGE := threadpoint-sonar-scanner:12.2.0.4256_8.1.0-go1.26.10
 
 .PHONY: help setup install ci-install format format-check format-prettier format-prettier-check format-toml format-toml-check format-shell format-shell-check format-python format-python-check test coverage sonar sonar-config sonar-image gofmt lint vet build docs-go docs-links ci
 

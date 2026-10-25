@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly ROOT_DIR
 readonly EXPECTED_REPOSITORY="threadgrid/threadpoint"
-readonly DEFAULT_IMAGE="threadpoint-sonar-scanner:12.1.0.3233_8.0.1-go1.26.8"
+readonly DEFAULT_IMAGE="threadpoint-sonar-scanner:12.2.0.4256_8.1.0-go1.26.10"
 readonly CACHE_VOLUME="threadpoint-sonar-cache"
 
 fail() {

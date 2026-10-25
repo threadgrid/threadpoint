@@ -31,14 +31,14 @@ jobs:
       # Explicitly retain that trusted controller generation; tagged code is
       # never checked out or executed as workflow control code in this job.
       - name: Check out trusted release controller
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
           ref: ${{ github.workflow_sha }}
 
       - name: Set up Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
           cache: true
@@ -157,7 +157,7 @@ jobs:
       # intentionally records publisher-controller provenance for the signed
       # checksum manifest rather than claiming tag-workflow provenance.
       - name: Attest signed checksum manifest
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: candidate/checksums.txt
 

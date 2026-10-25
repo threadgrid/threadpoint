@@ -1,7 +1,7 @@
 module github.com/threadgrid/threadpoint
 
-go 1.26
+go 1.26.0
 
 toolchain go1.26.10
 
-require golang.org/x/sys v0.47.0
+require golang.org/x/sys v0.49.0
