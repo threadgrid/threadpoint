@@ -1,5 +1,5 @@
 {
-  "name": "threadpoint-release-tags",
+  "name": "threadpoint-release-tag-creation",
   "target": "tag",
   "enforcement": "active",
   "conditions": {
@@ -9,10 +9,9 @@
     }
   },
   "rules": [
-    { "type": "creation" },
-    { "type": "update" },
-    { "type": "deletion" },
-    { "type": "non_fast_forward" }
+    {
+      "type": "creation"
+    }
   ],
   "bypass_actors": [
     {

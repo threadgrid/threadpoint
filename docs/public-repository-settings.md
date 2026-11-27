@@ -72,6 +72,14 @@ surface.
   the documented bad-release response procedure.
 - Signed-tag policy remains deferred to v1.0 hardening.
 
+Two active tag rulesets enforce this for `refs/tags/v*`:
+[`tag-protection-ruleset.json`](../.github/branch-protection/tag-protection-ruleset.json)
+restricts tag creation to repository administrators, and
+[`tag-immutability-ruleset.json`](../.github/branch-protection/tag-immutability-ruleset.json)
+blocks updating, deleting, or force-moving a tag with no bypass actors. Keeping
+them separate means the permission to cut a release does not include permission
+to rewrite an existing tag.
+
 ## Protected Release Environment
 
 Create a GitHub Actions environment named `release` before provisioning release
