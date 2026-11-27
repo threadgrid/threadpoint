@@ -1,7 +1,7 @@
 {
   "schema_version": "threadpoint.release_policy.v1",
   "product": "threadpoint",
-  "minimum_install_version": "v0.1.0",
+  "minimum_install_version": "v0.1.0-rc.1",
   "replacement_version": "latest",
   "blocked_versions": [],
   "max_age_days": 90,
