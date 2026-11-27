@@ -618,7 +618,6 @@ func verifyGitHubArtifactAttestation(ctx context.Context, repo string, tag strin
 	//nolint:gosec
 	cmd := exec.CommandContext(ctx, "gh", "attestation", "verify", artifactPath,
 		"-R", repo,
-		"--signer-repo", repo,
 		"--signer-workflow", workflow,
 		"--source-ref", sourceRef,
 	)

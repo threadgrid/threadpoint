@@ -776,12 +776,10 @@ verify_attestations() {
   need_cmd gh
   gh attestation verify "$archive_path" \
     -R "$repo" \
-    --signer-repo "$repo" \
     --signer-workflow "$release_archive_workflow" \
     --source-ref "refs/tags/${version_tag}" >/dev/null
   gh attestation verify "$checksums_file" \
     -R "$repo" \
-    --signer-repo "$repo" \
     --signer-workflow "$release_checksum_workflow" \
     --source-ref "refs/heads/main" >/dev/null
 }

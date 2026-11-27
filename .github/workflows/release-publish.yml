@@ -112,7 +112,6 @@ jobs:
           for archive in "${archives[@]}"; do
             gh attestation verify "$archive" \
               --repo "$GITHUB_REPOSITORY" \
-              --signer-repo "$GITHUB_REPOSITORY" \
               --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
               --source-ref "refs/tags/${RELEASE_TAG}" \
               --source-digest "${RELEASE_SHA}"

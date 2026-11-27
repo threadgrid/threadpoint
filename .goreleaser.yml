@@ -94,13 +94,11 @@ release:
     ```bash
     gh attestation verify "${archive}" \
       -R threadgrid/threadpoint \
-      --signer-repo threadgrid/threadpoint \
       --signer-workflow threadgrid/threadpoint/.github/workflows/release.yml \
       --source-ref refs/tags/{{ .Tag }}
 
     gh attestation verify checksums.txt \
       -R threadgrid/threadpoint \
-      --signer-repo threadgrid/threadpoint \
       --signer-workflow threadgrid/threadpoint/.github/workflows/release-publish.yml \
       --source-ref refs/heads/main
     ```

@@ -60,6 +60,14 @@ grep -Fq 'name: Verify tag-context archive provenance' "$publisher" || fail 'pub
 grep -Fq -- '--signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"' "$publisher" || fail 'publisher does not require the tag candidate workflow as archive signer'
 grep -Fq -- '--source-ref "refs/tags/${RELEASE_TAG}"' "$publisher" || fail 'publisher archive verification is not bound to the release tag ref'
 grep -Fq -- '--source-digest "${RELEASE_SHA}"' "$publisher" || fail 'publisher archive verification is not bound to the candidate commit'
+# GitHub CLI rejects --signer-repo combined with --signer-workflow, and the
+# workflow identity already names the repository.
+for verifier in scripts/install.sh .goreleaser.yml "$publisher" docs/supply-chain.md cmd/threadpoint/self_update.go; do
+  [ -f "$verifier" ] || fail "attestation verifier is missing: $verifier"
+  if grep -Fq -- '--signer-repo' "$verifier"; then
+    fail "attestation verification in $verifier still passes --signer-repo with --signer-workflow"
+  fi
+done
 if grep -Fq 'subject-checksums: candidate/checksums.txt' "$publisher"; then
   fail 'default-branch publisher still creates misleading tag archive attestations'
 fi

@@ -173,7 +173,22 @@ func TestGitHubArtifactAttestationIncludesCommandOutputOnFailure(t *testing.T) {
 	gh := filepath.Join(dir, "gh")
 	argsLog := filepath.Join(dir, "args.log")
 	t.Setenv("THREADPOINT_TEST_GH_ARGS", argsLog)
-	if err := os.WriteFile(gh, []byte("#!/bin/sh\nprintf '%s\\n' '---' \"$@\" >>\"$THREADPOINT_TEST_GH_ARGS\"\nprintf 'verified\\n'\n"), 0o755); err != nil {
+	// Like the real GitHub CLI, reject signer flags that are mutually exclusive.
+	fakeGH := `#!/bin/sh
+signer=0
+for arg in "$@"; do
+	case "$arg" in
+	--signer-repo | --signer-workflow | --cert-identity | --cert-identity-regex) signer=$((signer + 1)) ;;
+	esac
+done
+if [ "$signer" -gt 1 ]; then
+	echo "if any flags in the group [cert-identity cert-identity-regex signer-repo signer-workflow] are set none of the others can be" >&2
+	exit 1
+fi
+printf '%s\n' '---' "$@" >>"$THREADPOINT_TEST_GH_ARGS"
+printf 'verified\n'
+`
+	if err := os.WriteFile(gh, []byte(fakeGH), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir)

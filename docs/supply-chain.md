@@ -72,7 +72,6 @@ Verify the archive's GitHub Actions provenance with GitHub CLI:
 ```bash
 gh attestation verify "$archive" \
   -R threadgrid/threadpoint \
-  --signer-repo threadgrid/threadpoint \
   --signer-workflow threadgrid/threadpoint/.github/workflows/release.yml \
   --source-ref "refs/tags/$tag"
 ```
@@ -84,7 +83,6 @@ source ref is `refs/heads/main`, not the candidate tag:
 ```bash
 gh attestation verify checksums.txt \
   -R threadgrid/threadpoint \
-  --signer-repo threadgrid/threadpoint \
   --signer-workflow threadgrid/threadpoint/.github/workflows/release-publish.yml \
   --source-ref refs/heads/main
 ```
